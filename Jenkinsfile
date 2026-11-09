@@ -64,7 +64,7 @@ pipeline {
                     docker run -d \
                       --name ${CONTAINER_NAME} \
                       --restart unless-stopped \
-                      -p 80:80 \
+                      -p 80:8080 \
                       ${IMAGE_REPO}:${BUILD_NUMBER}
                 '''
             }
@@ -74,7 +74,7 @@ pipeline {
             steps {
                 sh '''
                     for i in $(seq 1 12); do
-                        if curl --fail --silent http://127.0.0.1/ > /dev/null; then
+                        if curl --fail --silent http://127.0.0.1/health > /dev/null; then
                             echo "Kanban Dashboard is healthy!"
                             exit 0
                         fi
