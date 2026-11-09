@@ -1,0 +1,9 @@
+services:
+  kanban:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kanban-dashboard:1.0
+    ports:
+      - "8080:80"
+    restart: unless-stopped
