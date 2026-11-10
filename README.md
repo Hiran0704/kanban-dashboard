@@ -1,236 +1,328 @@
 # Kanban Dashboard – Docker & Jenkins CI/CD on AWS
 
-A DevOps project demonstrating how to containerize a React application, publish Docker images, and automate deployment to an AWS EC2 instance using Jenkins and a GitHub webhook.
+## 1. Project Overview
 
-## Project Overview
+This project demonstrates the deployment of a React-based Kanban Dashboard application using Docker, Jenkins, GitHub, Docker Hub, and AWS EC2.
 
-This project uses a Kanban Dashboard application built with React, TypeScript, and Vite. The application is packaged into a Docker container using a multi-stage Docker build and served through Nginx.
+The objective is to implement an automated CI/CD pipeline that builds, versions, pushes, and deploys Docker images whenever changes are pushed to the GitHub repository.
 
-A Jenkins pipeline automates the process of checking out source code, building the Docker image, publishing it to Docker Hub, deploying it on an EC2 instance, and validating application health.
+The application is containerized using a multi-stage Docker build and served through Nginx.
 
-## Technology Stack
+## 2. Live Application
 
-- **Frontend:** React, TypeScript, Vite
-- **Containerization:** Docker
-- **Web Server:** Nginx
-- **CI/CD:** Jenkins
-- **Source Control:** Git, GitHub
-- **Container Registry:** Docker Hub
-- **Cloud Infrastructure:** AWS EC2
-- **Health Validation:** Docker HEALTHCHECK and HTTP health endpoint
+**Public Application URL:** http://15.252.185.146/
 
-## Architecture and Workflow
+**GitHub Repository:** https://github.com/Hiran0704/kanban-dashboard
 
-1. Developer pushes changes to GitHub.
-2. GitHub webhook triggers Jenkins.
-3. Jenkins checks out the latest source code.
-4. Jenkins builds the Docker image.
-5. Jenkins authenticates with Docker Hub and pushes the image.
-6. Jenkins deploys the image on AWS EC2.
-7. The pipeline validates the candidate and production application health.
-8. If production deployment or health validation fails, the pipeline attempts to restore the previous Docker image.
+**Docker Hub Repository:** https://hub.docker.com/r/hiran4024/kanban-dashboard
 
-## Repository
+The application is hosted on an AWS EC2 instance and served through Docker and Nginx.
 
-[Kanban Dashboard – GitHub](https://github.com/Hiran0704/kanban-dashboard)
+## 3. Technology Stack
 
-## Docker Implementation
+| Category | Technologies |
+|---|---|
+| Frontend | React, TypeScript, Vite |
+| Containerization | Docker |
+| Web Server | Nginx |
+| CI/CD | Jenkins |
+| Source Control | Git, GitHub |
+| Container Registry | Docker Hub |
+| Cloud Platform | AWS EC2 |
+| Operating System | Linux |
+| Security Scanning | Trivy |
 
-The project uses a multi-stage Dockerfile:
+## 4. System Architecture
 
-- The build stage uses Node.js to install dependencies and generate the production build.
-- The runtime stage uses Nginx to serve the generated static files.
-- The container runs as the non-root `nginx` user.
-- Nginx listens on container port `8080`.
-- A `/health` endpoint returns an HTTP success response.
-- Docker HEALTHCHECK periodically checks the endpoint.
+The project follows this automated deployment workflow:
 
-### Build the Docker image
-
-```bash
-docker build -t kanban-dashboard .
+```text
+Developer
+    |
+    v
+GitHub Repository
+    |
+    | GitHub Webhook
+    v
+Jenkins Pipeline
+    |
+    v
+Checkout Source Code
+    |
+    v
+Build Docker Image
+    |
+    v
+Tag Image with Build Number
+    |
+    v
+Push Image to Docker Hub
+    |
+    v
+AWS EC2 Instance
+    |
+    v
+Deploy Docker Container
+    |
+    v
+Health Check
+    |
+    v
+Live Kanban Dashboard
 ```
 
-### Run the container locally
+## 5. Docker Implementation
+
+The application is containerized using a multi-stage Dockerfile.
+
+### Build Stage
+- Uses Node.js Alpine.
+- Installs project dependencies.
+- Builds the React application.
+
+### Runtime Stage
+- Uses Nginx Alpine.
+- Copies the production build files.
+- Serves the application through Nginx.
+- Runs using a non-root Nginx user.
+- Includes a Docker HEALTHCHECK instruction.
+
+### Additional Docker Files
+
+- `Dockerfile` – Multi-stage container build.
+- `nginx.conf` – Nginx server configuration.
+- `.dockerignore` – Excludes unnecessary files from the Docker build context.
+
+## 6. Docker Security
+
+The project incorporates the following container security practices:
+
+- Multi-stage Docker build to separate build-time and runtime dependencies.
+- Lightweight Alpine-based images.
+- Non-root container execution using `USER nginx`.
+- `.dockerignore` to exclude unnecessary files and environment files.
+- No application secrets intentionally included in the image.
+
+### Non-root Execution Verification
+
+The running container was inspected using:
 
 ```bash
-docker run -d \
-  --name kanban-dashboard \
-  -p 8080:8080 \
-  kanban-dashboard
+sudo docker inspect kanban-dashboard --format '{{.Config.User}}'
 ```
 
-Open `http://localhost:8080` in your browser.
-
-### Check container health
+Runtime verification:
 
 ```bash
-docker ps
-docker inspect kanban-dashboard --format '{{.State.Health.Status}}'
+sudo docker exec kanban-dashboard id
 ```
 
-## Docker Hub
+Verified output:
 
-The project image is published to:
+```text
+uid=101(nginx) gid=101(nginx) groups=101(nginx)
+```
 
-[Docker Hub – hiran4024/kanban-dashboard](https://hub.docker.com/r/hiran4024/kanban-dashboard)
+### Trivy Security Scan
 
-The Jenkins pipeline publishes images using Jenkins build-number tags and the `latest` tag.
+Trivy was used to scan the versioned Docker image:
+
+```bash
+trivy image --scanners vuln hiran4024/kanban-dashboard:13
+```
+
+Secret scanning:
+
+```bash
+trivy image --scanners secret hiran4024/kanban-dashboard:13
+```
+
+**Scan results:**
+
+- Secret scan: 0 secrets detected.
+- Vulnerability scan: One Medium-severity finding identified in the `zlib` library.
+- CVE: `CVE-2026-4738`
+- Installed version: `1.3.2-r1`
+- Fixed version reported by Trivy: `1.4-r0`
+
+The identified vulnerability has been documented as a known security finding. The image has not been rebuilt with the suggested package update, so this finding remains outstanding.
+
+## 7. Docker Hub – Image Registry and Versioning
+
+The Docker image is published to Docker Hub:
+
+**Repository:** `hiran4024/kanban-dashboard`
+
+Images are tagged using Jenkins build numbers to maintain version history.
 
 Example:
 
 ```bash
-docker pull hiran4024/kanban-dashboard:latest
+docker build -t hiran4024/kanban-dashboard:13 .
+docker push hiran4024/kanban-dashboard:13
 ```
 
-## Jenkins CI/CD Pipeline
+Versioned image pull on EC2:
 
-The Jenkins pipeline contains the following stages:
+```bash
+sudo docker pull hiran4024/kanban-dashboard:13
+```
 
-| Stage | Description |
-|---|---|
-| Checkout | Retrieves source code from GitHub |
-| Build Docker Image | Builds the application image |
-| Push to Docker Hub | Publishes the image to the registry |
-| Deploy on EC2 | Deploys the application container |
-| Health Check | Validates application availability |
+The versioned image was successfully pulled and verified on the EC2 instance.
 
-Docker Hub authentication is configured through Jenkins credentials. Sensitive tokens and passwords are not stored in the repository.
+## 8. Jenkins CI/CD Pipeline
 
-## GitHub Webhook Integration
+Jenkins automates the application build and deployment process.
 
-A GitHub webhook is configured to trigger the Jenkins pipeline when code is pushed to the repository.
+The pipeline includes the following stages:
 
-The Jenkins job uses the **GitHub hook trigger for GITScm polling** option.
+1. **Checkout:** Retrieves application source code from GitHub.
+2. **Build Docker Image:** Builds the Docker image.
+3. **Push to Docker Hub:** Authenticates using Jenkins-managed credentials and pushes the versioned image.
+4. **Deploy on EC2:** Deploys the newly built container.
+5. **Health Check:** Verifies application availability after deployment.
 
-This enables automatic pipeline execution after repository updates without manually starting a Jenkins build.
+The pipeline also applies Docker resource limits:
 
-## Deployment Validation and Rollback
+- Memory limit: 512 MB
+- CPU limit: 0.5 CPU
 
-The deployment pipeline uses a candidate deployment approach:
+Docker Hub credentials are stored securely in Jenkins Credentials rather than hardcoded in the Jenkinsfile.
 
-1. Records the image ID of the currently running production container.
-2. Starts the new candidate container on temporary port `8081`.
-3. Checks the candidate's `/health` endpoint.
-4. Replaces the production container on port `80` only after the candidate passes its health check.
-5. Validates the production application through its health endpoint.
-6. If production deployment or health validation fails, the pipeline attempts to restore the previously running Docker image.
-7. Removes the temporary candidate container after pipeline execution.
+## 9. GitHub Webhook Integration
 
-### Docker Resource Limits
+GitHub webhook integration enables automatic Jenkins pipeline execution whenever changes are pushed to the repository.
 
-Resource limits are applied to both candidate and production containers:
+Webhook configuration:
 
-- **Memory:** 512 MiB
-- **CPU:** 0.5 CPU
+- Payload URL: `http://15.252.185.146:8080/github-webhook/`
+- Content type: `application/json`
+- Event: Push events
 
-### Rollback Validation Status
+The webhook integration was verified through successful GitHub webhook delivery and automatically triggered Jenkins builds.
 
-The rollback mechanism is implemented in the Jenkinsfile.
+## 10. Deployment and Rollback Strategy
 
-The normal deployment completed successfully in Jenkins Build #13. The application was also externally accessible through the EC2 public IP after deployment.
+The Jenkins pipeline implements a candidate deployment and health-check-based deployment strategy.
 
-An induced-failure rollback test has not been performed.
+### Deployment Process
 
-## AWS EC2 Deployment
+1. Builds and publishes a new versioned Docker image.
+2. Starts a candidate container on port 8081.
+3. Performs an application health check on the candidate deployment.
+4. Promotes the candidate after successful validation.
+5. Checks the production application after deployment.
 
-The application is deployed on an AWS EC2 instance using Docker.
+### Rollback Implementation
 
-**Live Application URL:** http://15.252.185.146/
+The Jenkinsfile includes rollback logic intended to restore the previous production container if the new deployment or its health check fails.
 
-Deployment configuration:
+This helps prevent an unsuccessful deployment from leaving the application unavailable.
 
-- **EC2 host port:** `80`
-- **Container port:** `8080`
-- **Container name:** `kanban-dashboard`
-- **Docker image:** `hiran4024/kanban-dashboard`
+**Note:** The rollback logic is implemented in the pipeline, but an intentional production failure test has not been performed. The normal deployment and health-check workflow has been successfully verified.
 
-The application was successfully accessed externally through the EC2 public IPv4 address and returned an HTTP `200 OK` response.
+## 11. Application Health Checks
 
-**Note:** The public IP may change if the GUVI lab EC2 instance is recreated.
+Docker HEALTHCHECK is configured to monitor application availability.
 
-## Health Checks and Monitoring
-
-The project uses Docker's built-in health-check mechanism and Nginx logs to validate the running application.
-
-Check container status:
+Health verification:
 
 ```bash
 sudo docker ps
 ```
 
-Check health status:
-
 ```bash
-sudo docker inspect kanban-dashboard \
-  --format '{{.State.Health.Status}}'
+sudo docker inspect kanban-dashboard --format '{{.State.Health.Status}}'
 ```
 
-Check application response:
+HTTP response verification:
 
 ```bash
-curl -I http://localhost/health
+curl -I http://localhost/
 ```
 
-View container logs:
+Expected response:
+
+```text
+HTTP/1.1 200 OK
+```
+
+The application was verified as running and healthy on the EC2 instance.
+
+## 12. Logging and Monitoring
+
+Application logs can be inspected using:
 
 ```bash
 sudo docker logs --tail=30 kanban-dashboard
 ```
 
-## Prerequisites
+Container status and configuration:
 
-To work with or reproduce this project, you will need:
+```bash
+sudo docker inspect kanban-dashboard
+```
 
-- Git and GitHub access
-- Docker
-- Node.js and npm for local application development
-- An AWS EC2 environment
-- Jenkins with Docker access
-- A Docker Hub account
-- A GitHub repository and webhook configuration
+Jenkins provides build history and console output for monitoring successful and failed pipeline executions.
 
-## Troubleshooting Notes
+## 13. AWS Infrastructure
 
-| Issue | Resolution used in this project |
-|---|---|
-| Jenkins could not access Docker | Added the Jenkins user to the Docker group and restarted Jenkins |
-| Docker Hub authentication failed | Created a valid Docker Hub access token with repository read/write permissions |
-| Jenkins could not find registry credentials | Configured the Docker Hub credential in Jenkins using the expected credential ID |
-| Application health check failed | Checked container status, Nginx logs, and the `/health` endpoint |
-| Jenkinsfile compilation failed | Corrected a Groovy comment that was mistakenly written as a shell comment |
+The application is deployed on an AWS EC2 instance.
 
-## Project Evidence
+Infrastructure components:
 
-Screenshots and supporting evidence are organized by project module:
+- AWS EC2 instance.
+- Linux operating system.
+- Docker Engine.
+- Jenkins automation server.
+- Security Group configurations.
+- Public IP access for the deployed application.
 
-- Application setup
-- Docker containerization
-- Docker security
-- Container registry and versioning
-- AWS infrastructure
-- Jenkins configuration
-- CI/CD pipeline
-- GitHub webhook integration
-- Health check and validation
-- Logging and monitoring
-- Docker resource limits
-- Rollback-enabled deployment pipeline
+**Application endpoint:** http://15.252.185.146/
 
-## Project Scope
+## 14. Project Repository Structure
 
-The project covers automated Docker image building, registry publishing, EC2 deployment, webhook-triggered CI/CD, candidate health validation, production health checks, rollback implementation, logging, and container resource limits.
+```text
+kanban-dashboard/
+│
+├── public/
+├── src/
+├── Dockerfile
+├── nginx.conf
+├── Jenkinsfile
+├── .dockerignore
+├── package.json
+├── package-lock.json
+└── README.md
+```
 
-The optional **Zero / Minimal Downtime Deployment** bonus module was intentionally skipped.
+## 15. Project Evidence
 
-## Acknowledgements
+Screenshots and implementation evidence are organised by project module.
 
-The Kanban Dashboard application was forked from the repository provided for the GUVI project. It was used as the application source for this DevOps implementation.
+Evidence includes:
 
-The Docker containerization, Nginx configuration, Jenkins CI/CD pipeline, Docker Hub integration, AWS EC2 deployment, GitHub webhook automation, health checks, logging, resource limits, and rollback mechanism were implemented as part of this project.
+- Application setup and build.
+- Docker image creation and execution.
+- Non-root container verification.
+- Trivy vulnerability and secret scanning.
+- Docker Hub image tags.
+- Versioned image pull on EC2.
+- Jenkins pipeline execution.
+- GitHub webhook integration.
+- Application health checks.
+- Container logs and inspection.
+- Docker resource limit verification.
+- Public application access.
 
----
+## 16. Conclusion
 
-**Author:** Hiran Aathtihya Selvamuthukumaran
+This project demonstrates an end-to-end Docker-based CI/CD implementation using Jenkins and AWS EC2.
 
-**Project:** Deploy Your Code on a Docker Container using Jenkins on AWS
+It covers application containerization, image versioning, registry integration, automated deployment, health checks, container security practices, resource limits, logging, and deployment rollback logic.
+
+The implementation provides practical experience with DevOps tools and automated application delivery workflows.
+
+## 17. Acknowledgements
+
+The application source was forked from the repository provided as part of the GUVI DevOps project assignment and adapted for Docker containerization and CI/CD deployment.
