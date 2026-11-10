@@ -64,6 +64,8 @@ pipeline {
                     docker run -d \
                       --name ${CONTAINER_NAME} \
                       --restart unless-stopped \
+                      --memory=512m \
+                      --cpus=0.5 \
                       -p 80:8080 \
                       ${IMAGE_REPO}:${BUILD_NUMBER}
                 '''
