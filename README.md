@@ -113,14 +113,17 @@ This enables automatic pipeline execution after repository updates without manua
 
 ## AWS EC2 Deployment
 
-The application is deployed on an AWS EC2 instance running Docker and Jenkins.
+### Live Application
 
-The deployment maps:
+**Application URL:** http://15.252.185.146/
 
-- **EC2 host port:** `80`
-- **Container port:** `8080`
+**Deployment Platform:** AWS EC2
 
-The application can be accessed through the EC2 instance's public address when the instance is running and its security group permits the required traffic. The public address may change when the lab environment is recreated.
+**Application Port:** 80 (mapped to container port 8080)
+
+The deployed Kanban Dashboard was successfully accessed through the EC2 public IPv4 address and returned an HTTP 200 OK response.
+
+*Note: The public IP may change if the lab EC2 instance is recreated.*
 
 ## Docker Resource Limits
 
