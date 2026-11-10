@@ -103,7 +103,7 @@ pipeline {
                         exit 1
                     '''
 
-                    # Mark production replacement as started
+                    // Mark production replacement as started
                     env.DEPLOYMENT_STARTED = 'true'
 
                     sh '''
