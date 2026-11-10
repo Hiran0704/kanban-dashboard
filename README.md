@@ -71,3 +71,4 @@ export default defineConfig([
   },
 ])
 ```
+GitHub webhook integration test.
