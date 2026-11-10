@@ -1,3 +1,10 @@
+## Acknowledgements
+
+The Kanban Dashboard application was forked from an existing GitHub repository and used as the application source for this DevOps project.
+
+The Docker containerization, Nginx configuration, Jenkins CI/CD pipeline, Docker Hub integration, AWS EC2 deployment, GitHub webhook automation, health checks, logging, and container resource limits were implemented as part of this project.
+
+
 # Kanban Dashboard – Docker & Jenkins CI/CD on AWS
 
 A DevOps project demonstrating how to containerize a React application, publish Docker images, and automate deployment to an AWS EC2 instance using Jenkins and a GitHub webhook.
@@ -209,6 +216,3 @@ The project covers automated Docker image building, registry publishing, EC2 dep
 The optional **Zero / Minimal Downtime Deployment** bonus module was intentionally skipped.
 
 ---
-
-**Author:** Hiran Aathtihya Selvamuthukumaran  
-**Project:** Deploy Your Code on a Docker Container using Jenkins on AWS
